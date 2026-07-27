@@ -61,6 +61,12 @@ func (f *fakeProspectRepository) CheckOut(_ context.Context, prospectID, visitID
 	}
 	return prospectmodel.Visit{ID: visitID, ProspectID: prospectID, SalesExecutiveID: owner}, nil
 }
+func (f *fakeProspectRepository) ListVisitMonitoring(_ context.Context, _ prospectmodel.VisitMonitoringFilter) ([]prospectmodel.VisitMonitoringItem, error) {
+	return nil, nil
+}
+func (f *fakeProspectRepository) DeleteVisit(_ context.Context, _ uuid.UUID, _ uuid.UUID) error {
+	return nil
+}
 
 func (f *fakeProspectRepository) FindReview(_ context.Context, id uuid.UUID) (prospectmodel.Review, error) {
 	if f.prospect.ID != id {
