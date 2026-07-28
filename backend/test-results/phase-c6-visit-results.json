@@ -1,0 +1,26 @@
+[
+    {
+        "id":  "visit-prospect-create",
+        "status":  201,
+        "prospectId":  "ad084fad-72bb-4eea-8c81-8f9d259e6d6a"
+    },
+    {
+        "id":  "checkin-form-valid",
+        "status":  201,
+        "visitId":  "a919004c-2f94-476b-b8bc-5ca74c4a4983"
+    },
+    {
+        "id":  "checkin-form-duplicate",
+        "status":  409,
+        "code":  null
+    },
+    {
+        "id":  "checkout-form-valid",
+        "status":  200
+    },
+    {
+        "id":  "checkin-form-invalid-coordinate",
+        "status":  422,
+        "code":  null
+    }
+]

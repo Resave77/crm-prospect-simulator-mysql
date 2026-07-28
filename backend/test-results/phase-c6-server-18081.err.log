@@ -1,0 +1,2 @@
+2026/07/28 14:34:36 failed to listen: listen tcp4 :18081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+exit status 1
