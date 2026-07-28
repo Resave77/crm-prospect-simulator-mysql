@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"crm-prospect-simulator/backend/config"
@@ -14,12 +15,11 @@ import (
 	"crm-prospect-simulator/backend/platform/database"
 	"crm-prospect-simulator/backend/server"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Application struct {
 	Fiber *fiber.App
-	Pool  *pgxpool.Pool
+	DB    *sql.DB
 }
 
 func Build(ctx context.Context) (*Application, config.Config, error) {
@@ -27,17 +27,22 @@ func Build(ctx context.Context) (*Application, config.Config, error) {
 	if err != nil {
 		return nil, config.Config{}, fmt.Errorf("load configuration: %w", err)
 	}
-	pool, err := database.Connect(ctx, cfg.DatabaseURL)
+	db, err := database.ConnectMySQL(ctx, cfg.DatabaseURL, database.PoolConfig{
+		MaxOpenConns:    cfg.DBMaxOpenConns,
+		MaxIdleConns:    cfg.DBMaxIdleConns,
+		ConnMaxLifetime: cfg.DBConnMaxLifetime,
+		ConnMaxIdleTime: cfg.DBConnMaxIdleTime,
+	})
 	if err != nil {
 		return nil, config.Config{}, err
 	}
-	repo := repository.NewPostgresRepository(pool)
+	repo := repository.NewMySQLRepository(db)
 	tokens := service.NewTokenManager(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience, cfg.AccessTokenTTL)
 	authService := service.NewAuthService(repo, repo, tokens, cfg.RefreshTokenTTL)
-	prospectRepo := prospectrepository.NewPostgresRepository(pool)
+	prospectRepo := prospectrepository.NewMySQLRepository(db)
 	placesClient := prospectservice.NewGooglePlacesClient(cfg.GoogleMapsAPIKey)
 	prospectService := prospectservice.New(prospectRepo, placesClient)
-	customerRepo := customerrepository.NewPostgresRepository(pool)
+	customerRepo := customerrepository.NewMySQLRepository(db)
 	customerService := customerservice.New(customerRepo, prospectService)
-	return &Application{Fiber: server.New(cfg, authService, prospectService, customerService), Pool: pool}, cfg, nil
+	return &Application{Fiber: server.New(cfg, authService, prospectService, customerService), DB: db}, cfg, nil
 }

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 
 	"crm-prospect-simulator/backend/config"
 	"crm-prospect-simulator/backend/internal/auth/model"
@@ -13,21 +15,32 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	ctx := context.Background()
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	pool, err := database.Connect(ctx, cfg.DatabaseURL)
+	db, err := database.ConnectMySQL(ctx, cfg.DatabaseURL, database.PoolConfig{
+		MaxOpenConns:    cfg.DBMaxOpenConns,
+		MaxIdleConns:    cfg.DBMaxIdleConns,
+		ConnMaxLifetime: cfg.DBConnMaxLifetime,
+		ConnMaxIdleTime: cfg.DBConnMaxIdleTime,
+	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer pool.Close()
+	defer db.Close()
 	hash, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	repo := repository.NewPostgresRepository(pool)
+	repo := repository.NewMySQLRepository(db)
 	users := []model.User{
 		{ID: uuid.New(), Email: "admin@yummy.test", PasswordHash: string(hash), FullName: "Yummy Administrator", Role: model.RoleAdministrator, Status: model.UserActive},
 		{ID: uuid.New(), Email: "sales@yummy.test", PasswordHash: string(hash), FullName: "Nurdin Pratama", Role: model.RoleSalesExecutive, Status: model.UserActive},
@@ -36,7 +49,7 @@ func main() {
 	}
 	for _, user := range users {
 		if err := repo.UpsertSeed(ctx, user); err != nil {
-			log.Fatal(err)
+			return err
 		}
 		log.Printf("seeded account %s", user.Role)
 	}
@@ -48,28 +61,37 @@ func main() {
 		uuid.MustParse("10000000-0000-4000-8000-000000000005"), uuid.MustParse("10000000-0000-4000-8000-000000000006"),
 		uuid.MustParse("10000000-0000-4000-8000-000000000007"), uuid.MustParse("10000000-0000-4000-8000-000000000008"),
 	}
-	tx, err := pool.Begin(ctx)
+	demoProspectArgs := make([]any, 0, len(demoProspectIDs))
+	demoProspectPlaceholders := make([]string, 0, len(demoProspectIDs))
+	for _, id := range demoProspectIDs {
+		demoProspectArgs = append(demoProspectArgs, id.String())
+		demoProspectPlaceholders = append(demoProspectPlaceholders, "?")
+	}
+	demoProspectList := strings.Join(demoProspectPlaceholders, ",")
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer tx.Rollback(ctx)
-	if _, err = tx.Exec(ctx, `DELETE FROM customer_sites WHERE source_prospect_id = ANY($1)`, demoProspectIDs); err != nil {
-		log.Fatal(err)
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `DELETE FROM customer_sites WHERE source_prospect_id IN (`+demoProspectList+`)`, demoProspectArgs...); err != nil {
+		return err
 	}
-	if _, err = tx.Exec(ctx, `DELETE FROM prospect_visits WHERE prospect_id = ANY($1)`, demoProspectIDs); err != nil {
-		log.Fatal(err)
+	if _, err = tx.ExecContext(ctx, `DELETE FROM prospect_visits WHERE prospect_id IN (`+demoProspectList+`)`, demoProspectArgs...); err != nil {
+		return err
 	}
-	if _, err = tx.Exec(ctx, `DELETE FROM prospect_status_history WHERE prospect_id = ANY($1)`, demoProspectIDs); err != nil {
-		log.Fatal(err)
+	if _, err = tx.ExecContext(ctx, `DELETE FROM prospect_status_history WHERE prospect_id IN (`+demoProspectList+`)`, demoProspectArgs...); err != nil {
+		return err
 	}
-	if _, err = tx.Exec(ctx, `DELETE FROM prospects WHERE id = ANY($1)`, demoProspectIDs); err != nil {
-		log.Fatal(err)
+	if _, err = tx.ExecContext(ctx, `DELETE FROM prospects WHERE id IN (`+demoProspectList+`)`, demoProspectArgs...); err != nil {
+		return err
 	}
-	if _, err = tx.Exec(ctx, `DELETE FROM parent_companies pc WHERE pc.parent_code = 'PC-000900' AND NOT EXISTS (SELECT 1 FROM customer_sites cs WHERE cs.parent_company_id = pc.id)`); err != nil {
-		log.Fatal(err)
+	if _, err = tx.ExecContext(ctx, `DELETE FROM parent_companies WHERE parent_code = 'PC-000900' AND NOT EXISTS (SELECT 1 FROM customer_sites cs WHERE cs.parent_company_id = parent_companies.id)`); err != nil {
+		return err
 	}
-	if err = tx.Commit(ctx); err != nil {
-		log.Fatal(err)
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit seed cleanup: %w", err)
 	}
 	log.Printf("seeded local login accounts; removed legacy simulator business records")
+	return nil
 }

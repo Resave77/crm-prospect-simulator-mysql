@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 )
 
 type PoolConfig struct {
@@ -53,12 +54,60 @@ func ConnectMySQL(ctx context.Context, dsn string, pool PoolConfig) (*sql.DB, er
 }
 
 func validateMySQLDSN(dsn string) error {
-	lower := strings.ToLower(dsn)
-	required := []string{"parsetime=true", "loc=utc", "charset=utf8mb4"}
-	for _, option := range required {
-		if !strings.Contains(lower, option) {
-			return fmt.Errorf("mysql dsn must include %s", option)
-		}
+	cfg, err := mysql.ParseDSN(dsn)
+	if err != nil {
+		return fmt.Errorf("parse mysql dsn: %w", err)
+	}
+	if cfg.DBName == "" {
+		return fmt.Errorf("mysql dsn must include database name")
+	}
+	if cfg.Net != "" && cfg.Addr == "" {
+		return fmt.Errorf("mysql dsn must include network address")
+	}
+
+	values, err := parseDSNQuery(dsn)
+	if err != nil {
+		return err
+	}
+	if !allQueryValuesEqual(values, "charset", "utf8mb4") {
+		return fmt.Errorf("mysql dsn must include charset=utf8mb4")
+	}
+	if !allQueryValuesEqual(values, "collation", "utf8mb4_0900_ai_ci") {
+		return fmt.Errorf("mysql dsn must include collation=utf8mb4_0900_ai_ci")
+	}
+	if !cfg.ParseTime {
+		return fmt.Errorf("mysql dsn must enable parseTime=true")
+	}
+	if cfg.Loc == nil || cfg.Loc.String() != "UTC" {
+		return fmt.Errorf("mysql dsn must use loc=UTC")
+	}
+	if cfg.MultiStatements {
+		return fmt.Errorf("mysql dsn must disable multiStatements")
 	}
 	return nil
+}
+
+func parseDSNQuery(rawDSN string) (url.Values, error) {
+	queryStart := strings.LastIndex(rawDSN, "?")
+	if queryStart < 0 {
+		return nil, fmt.Errorf("mysql dsn must include query parameters")
+	}
+	values, err := url.ParseQuery(rawDSN[queryStart+1:])
+	if err != nil {
+		return nil, fmt.Errorf("parse mysql dsn query: %w", err)
+	}
+	return values, nil
+}
+
+func allQueryValuesEqual(values url.Values, key, expected string) bool {
+	current, ok := values[key]
+	if !ok || len(current) == 0 {
+		return false
+	}
+	for _, value := range current {
+		if value != expected {
+			return false
+		}
+	}
+	return true
 }
