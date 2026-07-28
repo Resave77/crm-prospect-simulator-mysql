@@ -6,11 +6,11 @@ Vue 3 frontend and JSON-only Go/Fiber API for the approved Enterprise CRM archit
 
 - Go 1.24+
 - Node.js 22+
-- PostgreSQL
+- MySQL 8.0.13+ (MySQL 8.4 LTS recommended)
 
 ## Initial setup
 
-1. Copy `.env.example` to `.env` and replace the secrets.
+1. Copy `.env.example` to `.env`, set a MySQL `DATABASE_URL`, and replace the secrets.
 2. Install database tooling with `npm.cmd --prefix backend install`.
 3. Apply migrations with `npm.cmd --prefix backend run prisma:migrate:deploy`.
 4. Seed the two approved users with `go run ./backend/cmd/seed`.
