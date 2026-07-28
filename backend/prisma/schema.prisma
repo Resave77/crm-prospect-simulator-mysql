@@ -1,6 +1,6 @@
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url      = env("PRISMA_DATABASE_URL")
 }
 
 enum UserRole {
@@ -34,8 +34,8 @@ model User {
   status                 UserStatus              @default(ACTIVE)
   tokenVersion           Int                     @default(1) @map("token_version")
   lastLoginAt            DateTime?               @map("last_login_at") @db.DateTime(6)
-  createdAt              DateTime                @default(now()) @map("created_at") @db.DateTime(6)
-  updatedAt              DateTime                @updatedAt @map("updated_at") @db.DateTime(6)
+  createdAt              DateTime                @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("created_at") @db.DateTime(6)
+  updatedAt              DateTime                @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("updated_at") @db.DateTime(6)
   refreshSessions        RefreshSession[]
   assignedProspects      Prospect[]              @relation("ProspectSalesExecutive")
   prospectStatusChanges  ProspectStatusHistory[] @relation("ProspectStatusActor")
@@ -56,8 +56,8 @@ model RefreshSession {
   revokedAt           DateTime? @map("revoked_at") @db.DateTime(6)
   revokeReason        String?   @map("revoke_reason") @db.VarChar(255)
   replacedBySessionId String?   @map("replaced_by_session_id") @db.Char(36)
-  createdAt           DateTime  @default(now()) @map("created_at") @db.DateTime(6)
-  updatedAt           DateTime  @updatedAt @map("updated_at") @db.DateTime(6)
+  createdAt           DateTime  @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("created_at") @db.DateTime(6)
+  updatedAt           DateTime  @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("updated_at") @db.DateTime(6)
   user                User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, expiresAt])
@@ -83,8 +83,8 @@ model Prospect {
   followUpNotes            String                  @default("") @map("follow_up_notes") @db.Text
   status                   ProspectStatus          @default(NEW_LEAD)
   convertedAt              DateTime?               @map("converted_at") @db.DateTime(6)
-  createdAt                DateTime                @default(now()) @map("created_at") @db.DateTime(6)
-  updatedAt                DateTime                @updatedAt @map("updated_at") @db.DateTime(6)
+  createdAt                DateTime                @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("created_at") @db.DateTime(6)
+  updatedAt                DateTime                @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("updated_at") @db.DateTime(6)
   assignedSalesExecutive   User                    @relation("ProspectSalesExecutive", fields: [assignedSalesExecutiveId], references: [id], onDelete: Restrict)
   statusHistory            ProspectStatusHistory[]
 
@@ -109,9 +109,9 @@ model ProspectVisit {
   selfieReference   String    @default("") @map("selfie_reference") @db.VarChar(2048)
   visitNotes        String    @default("") @map("visit_notes") @db.Text
   followUpNotes     String    @default("") @map("follow_up_notes") @db.Text
-  createdAt         DateTime  @default(now()) @map("created_at") @db.DateTime(6)
-  updatedAt         DateTime  @updatedAt @map("updated_at") @db.DateTime(6)
-  prospect          Prospect  @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  createdAt         DateTime  @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("created_at") @db.DateTime(6)
+  updatedAt         DateTime  @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("updated_at") @db.DateTime(6)
+  prospect          Prospect  @relation(fields: [prospectId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   salesExecutive    User      @relation("ProspectVisitSalesExecutive", fields: [salesExecutiveId], references: [id], onDelete: Restrict)
 
   @@index([prospectId, checkInAt])
@@ -126,7 +126,7 @@ model ProspectStatusHistory {
   toStatus        ProspectStatus  @map("to_status")
   changedByUserId String          @map("changed_by_user_id") @db.Char(36)
   notes           String          @default("") @db.Text
-  createdAt       DateTime        @default(now()) @map("created_at") @db.DateTime(6)
+  createdAt       DateTime        @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("created_at") @db.DateTime(6)
   prospect        Prospect        @relation(fields: [prospectId], references: [id], onDelete: Restrict)
   changedBy       User            @relation("ProspectStatusActor", fields: [changedByUserId], references: [id], onDelete: Restrict)
 
@@ -152,8 +152,8 @@ model ParentCompany {
   npwpNumber      String         @default("") @map("npwp_number") @db.VarChar(64)
   termOfPayment   String         @default("") @map("term_of_payment") @db.VarChar(191)
   kamAssignments  Json           @default("[]") @map("kam_assignments")
-  createdAt       DateTime       @default(now()) @map("created_at") @db.DateTime(6)
-  updatedAt       DateTime       @updatedAt @map("updated_at") @db.DateTime(6)
+  createdAt       DateTime       @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("created_at") @db.DateTime(6)
+  updatedAt       DateTime       @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("updated_at") @db.DateTime(6)
   customerSites   CustomerSite[]
 
   @@index([name])
@@ -192,8 +192,8 @@ model CustomerSite {
   salesAssignments       Json          @default("[]") @map("sales_assignments")
   convertedAt            DateTime      @map("converted_at") @db.DateTime(6)
   convertedByAdminId     String        @map("converted_by_admin_id") @db.Char(36)
-  createdAt              DateTime      @default(now()) @map("created_at") @db.DateTime(6)
-  updatedAt              DateTime      @updatedAt @map("updated_at") @db.DateTime(6)
+  createdAt              DateTime      @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("created_at") @db.DateTime(6)
+  updatedAt              DateTime      @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("updated_at") @db.DateTime(6)
   parentCompany          ParentCompany @relation(fields: [parentCompanyId], references: [id], onDelete: Restrict)
 
   salesExecutive   User @relation("CustomerSalesExecutive", fields: [salesExecutiveId], references: [id], onDelete: Restrict)
@@ -207,7 +207,7 @@ model CustomerSite {
 model CodeCounter {
   name         String   @id @db.VarChar(64)
   currentValue BigInt   @map("current_value")
-  updatedAt    DateTime @map("updated_at") @db.DateTime(6)
+  updatedAt    DateTime @default(dbgenerated("(UTC_TIMESTAMP(6))")) @map("updated_at") @db.DateTime(6)
 
   @@map("code_counters")
 }

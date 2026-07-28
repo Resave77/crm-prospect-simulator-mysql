@@ -9,8 +9,8 @@ func TestValidateMySQLDSN(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "valid example",
-			dsn:     "user:password@tcp(127.0.0.1:3306)/crm_prospect?charset=utf8mb4&collation=utf8mb4_0900_ai_ci&parseTime=true&loc=UTC",
+			name:    "valid env example",
+			dsn:     "root:password@tcp(127.0.0.1:3306)/yummy_crm?charset=utf8mb4&collation=utf8mb4_0900_ai_ci&parseTime=true&loc=UTC",
 			wantErr: false,
 		},
 		{
