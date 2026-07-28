@@ -26,7 +26,7 @@ Aplikasi harus tetap memiliki:
 
 ## Locked Technical Decisions
 
-- MySQL minimal versi 8.0.
+- MySQL minimal versi 8.0.13+ (diperlukan untuk expression defaults pada JSON/TEXT). Disarankan MySQL 8.4 LTS.
 - Runtime menggunakan `database/sql`.
 - Driver menggunakan `github.com/go-sql-driver/mysql`.
 - Prisma hanya digunakan sebagai schema dan migration tooling.

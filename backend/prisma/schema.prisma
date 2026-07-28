@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -26,38 +26,38 @@ enum ProspectStatus {
 }
 
 model User {
-  id              String           @id @default(uuid()) @db.Uuid
-  email           String           @unique
-  passwordHash    String           @map("password_hash")
-  fullName        String           @map("full_name")
-  role            UserRole
-  status          UserStatus       @default(ACTIVE)
-  tokenVersion    Int              @default(1) @map("token_version")
-  lastLoginAt     DateTime?        @map("last_login_at") @db.Timestamptz(6)
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  refreshSessions RefreshSession[]
-  assignedProspects Prospect[]              @relation("ProspectSalesExecutive")
-  prospectStatusChanges ProspectStatusHistory[] @relation("ProspectStatusActor")
-  assignedCustomerSites CustomerSite[]      @relation("CustomerSalesExecutive")
-  convertedCustomerSites CustomerSite[]     @relation("CustomerConverter")
-  prospectVisits ProspectVisit[]             @relation("ProspectVisitSalesExecutive")
+  id                     String                  @id @db.Char(36)
+  email                  String                  @unique @db.VarChar(191)
+  passwordHash           String                  @map("password_hash") @db.VarChar(255)
+  fullName               String                  @map("full_name") @db.VarChar(255)
+  role                   UserRole
+  status                 UserStatus              @default(ACTIVE)
+  tokenVersion           Int                     @default(1) @map("token_version")
+  lastLoginAt            DateTime?               @map("last_login_at") @db.DateTime(6)
+  createdAt              DateTime                @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt              DateTime                @updatedAt @map("updated_at") @db.DateTime(6)
+  refreshSessions        RefreshSession[]
+  assignedProspects      Prospect[]              @relation("ProspectSalesExecutive")
+  prospectStatusChanges  ProspectStatusHistory[] @relation("ProspectStatusActor")
+  assignedCustomerSites  CustomerSite[]          @relation("CustomerSalesExecutive")
+  convertedCustomerSites CustomerSite[]          @relation("CustomerConverter")
+  prospectVisits         ProspectVisit[]         @relation("ProspectVisitSalesExecutive")
 
   @@map("users")
 }
 
 model RefreshSession {
-  id                  String    @id @default(uuid()) @db.Uuid
-  userId              String    @map("user_id") @db.Uuid
-  tokenHash           String    @map("token_hash")
-  userAgent           String    @default("") @map("user_agent")
-  ipAddress           String    @default("") @map("ip_address")
-  expiresAt           DateTime  @map("expires_at") @db.Timestamptz(6)
-  revokedAt           DateTime? @map("revoked_at") @db.Timestamptz(6)
-  revokeReason        String?   @map("revoke_reason")
-  replacedBySessionId String?   @map("replaced_by_session_id") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  String    @id @db.Char(36)
+  userId              String    @map("user_id") @db.Char(36)
+  tokenHash           String    @map("token_hash") @db.VarChar(255)
+  userAgent           String    @default("") @map("user_agent") @db.VarChar(512)
+  ipAddress           String    @default("") @map("ip_address") @db.VarChar(45)
+  expiresAt           DateTime  @map("expires_at") @db.DateTime(6)
+  revokedAt           DateTime? @map("revoked_at") @db.DateTime(6)
+  revokeReason        String?   @map("revoke_reason") @db.VarChar(255)
+  replacedBySessionId String?   @map("replaced_by_session_id") @db.Char(36)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.DateTime(6)
   user                User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, expiresAt])
@@ -66,52 +66,53 @@ model RefreshSession {
 }
 
 model Prospect {
-  id                       String                  @id @default(uuid()) @db.Uuid
-  googlePlaceId            String                  @unique @map("google_place_id")
-  placeName                String                  @map("place_name")
-  formattedAddress         String                  @map("formatted_address")
-  latitude                 Float?                  @db.DoublePrecision
-  longitude                Float?                  @db.DoublePrecision
-  placeCategory            String                  @map("place_category")
-  industryGroup            String                  @default("Other") @map("industry_group")
+  id                       String                  @id @db.Char(36)
+  googlePlaceId            String                  @unique @map("google_place_id") @db.VarChar(191)
+  placeName                String                  @map("place_name") @db.VarChar(255)
+  formattedAddress         String                  @map("formatted_address") @db.Text
+  latitude                 Float?                  @db.Double
+  longitude                Float?                  @db.Double
+  placeCategory            String                  @map("place_category") @db.VarChar(191)
+  industryGroup            String                  @default("Other") @map("industry_group") @db.VarChar(191)
   placeTypes               Json                    @default("[]") @map("place_types")
-  phoneNumber              String?                 @map("phone_number")
-  websiteUrl               String?                 @map("website_url")
-  googleMapsUrl            String?                 @map("google_maps_url")
-  assignedSalesExecutiveId String                  @map("assigned_sales_executive_id") @db.Uuid
-  visitNotes               String                  @default("") @map("visit_notes")
-  followUpNotes            String                  @default("") @map("follow_up_notes")
+  phoneNumber              String?                 @map("phone_number") @db.VarChar(64)
+  websiteUrl               String?                 @map("website_url") @db.VarChar(2048)
+  googleMapsUrl            String?                 @map("google_maps_url") @db.VarChar(2048)
+  assignedSalesExecutiveId String                  @map("assigned_sales_executive_id") @db.Char(36)
+  visitNotes               String                  @default("") @map("visit_notes") @db.Text
+  followUpNotes            String                  @default("") @map("follow_up_notes") @db.Text
   status                   ProspectStatus          @default(NEW_LEAD)
-  convertedAt              DateTime?               @map("converted_at") @db.Timestamptz(6)
-  createdAt                DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  convertedAt              DateTime?               @map("converted_at") @db.DateTime(6)
+  createdAt                DateTime                @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt                DateTime                @updatedAt @map("updated_at") @db.DateTime(6)
   assignedSalesExecutive   User                    @relation("ProspectSalesExecutive", fields: [assignedSalesExecutiveId], references: [id], onDelete: Restrict)
   statusHistory            ProspectStatusHistory[]
-  convertedCustomerSite    CustomerSite?
-  visits                   ProspectVisit[]
+
+  visits ProspectVisit[]
 
   @@index([assignedSalesExecutiveId, status])
   @@index([status, createdAt])
+  @@index([industryGroup, status])
   @@map("prospects")
 }
 
 model ProspectVisit {
-  id                       String    @id @default(uuid()) @db.Uuid
-  prospectId               String    @map("prospect_id") @db.Uuid
-  salesExecutiveId         String    @map("sales_executive_id") @db.Uuid
-  checkInAt                DateTime  @map("check_in_at") @db.Timestamptz(6)
-  checkInLatitude          Float     @map("check_in_latitude") @db.DoublePrecision
-  checkInLongitude         Float     @map("check_in_longitude") @db.DoublePrecision
-  checkOutAt               DateTime? @map("check_out_at") @db.Timestamptz(6)
-  checkOutLatitude         Float?    @map("check_out_latitude") @db.DoublePrecision
-  checkOutLongitude        Float?    @map("check_out_longitude") @db.DoublePrecision
-  selfieReference          String    @default("") @map("selfie_reference")
-  visitNotes               String    @default("") @map("visit_notes")
-  followUpNotes            String    @default("") @map("follow_up_notes")
-  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  prospect                 Prospect  @relation(fields: [prospectId], references: [id], onDelete: Restrict)
-  salesExecutive           User      @relation("ProspectVisitSalesExecutive", fields: [salesExecutiveId], references: [id], onDelete: Restrict)
+  id                String    @id @db.Char(36)
+  prospectId        String    @map("prospect_id") @db.Char(36)
+  salesExecutiveId  String    @map("sales_executive_id") @db.Char(36)
+  checkInAt         DateTime  @map("check_in_at") @db.DateTime(6)
+  checkInLatitude   Float     @map("check_in_latitude") @db.Double
+  checkInLongitude  Float     @map("check_in_longitude") @db.Double
+  checkOutAt        DateTime? @map("check_out_at") @db.DateTime(6)
+  checkOutLatitude  Float?    @map("check_out_latitude") @db.Double
+  checkOutLongitude Float?    @map("check_out_longitude") @db.Double
+  selfieReference   String    @default("") @map("selfie_reference") @db.VarChar(2048)
+  visitNotes        String    @default("") @map("visit_notes") @db.Text
+  followUpNotes     String    @default("") @map("follow_up_notes") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.DateTime(6)
+  prospect          Prospect  @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  salesExecutive    User      @relation("ProspectVisitSalesExecutive", fields: [salesExecutiveId], references: [id], onDelete: Restrict)
 
   @@index([prospectId, checkInAt])
   @@index([salesExecutiveId, checkInAt])
@@ -119,86 +120,94 @@ model ProspectVisit {
 }
 
 model ProspectStatusHistory {
-  id              String         @id @default(uuid()) @db.Uuid
-  prospectId      String         @map("prospect_id") @db.Uuid
+  id              String          @id @db.Char(36)
+  prospectId      String          @map("prospect_id") @db.Char(36)
   fromStatus      ProspectStatus? @map("from_status")
   toStatus        ProspectStatus  @map("to_status")
-  changedByUserId String         @map("changed_by_user_id") @db.Uuid
-  notes           String         @default("")
-  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  prospect        Prospect       @relation(fields: [prospectId], references: [id], onDelete: Restrict)
-  changedBy       User           @relation("ProspectStatusActor", fields: [changedByUserId], references: [id], onDelete: Restrict)
+  changedByUserId String          @map("changed_by_user_id") @db.Char(36)
+  notes           String          @default("") @db.Text
+  createdAt       DateTime        @default(now()) @map("created_at") @db.DateTime(6)
+  prospect        Prospect        @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  changedBy       User            @relation("ProspectStatusActor", fields: [changedByUserId], references: [id], onDelete: Restrict)
 
   @@index([prospectId, createdAt])
   @@map("prospect_status_history")
 }
 
 model ParentCompany {
-  id                  String         @id @default(uuid()) @db.Uuid
-  parentCode          String         @unique @map("parent_code")
-  name                String
-  addressMode         String         @default("MANUAL") @map("address_mode")
-  province            String         @default("")
-  district            String         @default("")
-  subDistrict         String         @default("") @map("sub_district")
-  village             String         @default("")
-  latitude            Float?         @db.DoublePrecision
-  longitude           Float?         @db.DoublePrecision
-  previewAddress      String         @default("") @map("preview_address")
-  companyContacts     Json           @default("[]") @map("company_contacts")
-  npwpName            String         @default("") @map("npwp_name")
-  npwpAddress         String         @default("") @map("npwp_address")
-  npwpNumber          String         @default("") @map("npwp_number")
-  termOfPayment       String         @default("") @map("term_of_payment")
-  kamAssignments      Json           @default("[]") @map("kam_assignments")
-  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  customerSites       CustomerSite[]
+  id              String         @id @db.Char(36)
+  parentCode      String         @unique @map("parent_code") @db.VarChar(32)
+  name            String         @db.VarChar(255)
+  addressMode     String         @default("MANUAL") @map("address_mode") @db.VarChar(64)
+  province        String         @default("") @db.VarChar(191)
+  district        String         @default("") @db.VarChar(191)
+  subDistrict     String         @default("") @map("sub_district") @db.VarChar(191)
+  village         String         @default("") @db.VarChar(191)
+  latitude        Float?         @db.Double
+  longitude       Float?         @db.Double
+  previewAddress  String         @default("") @map("preview_address") @db.Text
+  companyContacts Json           @default("[]") @map("company_contacts")
+  npwpName        String         @default("") @map("npwp_name") @db.VarChar(255)
+  npwpAddress     String         @default("") @map("npwp_address") @db.Text
+  npwpNumber      String         @default("") @map("npwp_number") @db.VarChar(64)
+  termOfPayment   String         @default("") @map("term_of_payment") @db.VarChar(191)
+  kamAssignments  Json           @default("[]") @map("kam_assignments")
+  createdAt       DateTime       @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.DateTime(6)
+  customerSites   CustomerSite[]
 
   @@index([name])
   @@map("parent_companies")
 }
 
 model CustomerSite {
-  id                       String        @id @default(uuid()) @db.Uuid
-  customerCode             String        @unique @map("customer_code")
-  parentCompanyId          String        @map("parent_company_id") @db.Uuid
-  sourceProspectId         String        @unique @map("source_prospect_id") @db.Uuid
-  sourceGooglePlaceId      String        @unique @map("source_google_place_id")
-  name                     String
-  segment                  String
-  category                 String
-  addressMode              String        @default("MANUAL") @map("address_mode")
-  province                 String        @default("")
-  district                 String        @default("")
-  subDistrict              String        @default("") @map("sub_district")
-  village                  String        @default("")
-  latitude                 Float?        @db.DoublePrecision
-  longitude                Float?        @db.DoublePrecision
-  previewAddress           String        @map("preview_address")
-  siteContacts             Json          @default("[]") @map("site_contacts")
-  ppn                      String        @default("")
-  idTkuNumber              String        @default("") @map("id_tku_number")
-  nik                      String        @default("")
-  shipmentCost             String        @default("") @map("shipment_cost")
-  invoiceType              String        @default("") @map("invoice_type")
-  bankAccount              String        @default("") @map("bank_account")
-  billToSource             String        @default("") @map("bill_to_source")
-  shipToSource             String        @default("") @map("ship_to_source")
-  billingAddressPreview    String        @default("") @map("billing_address_preview")
-  shippingAddressPreview   String        @default("") @map("shipping_address_preview")
-  salesExecutiveId         String        @map("sales_executive_id") @db.Uuid
-  salesAssignments         Json          @default("[]") @map("sales_assignments")
-  convertedAt              DateTime      @map("converted_at") @db.Timestamptz(6)
-  convertedByAdminId       String        @map("converted_by_admin_id") @db.Uuid
-  createdAt                DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-  parentCompany            ParentCompany @relation(fields: [parentCompanyId], references: [id], onDelete: Restrict)
-  sourceProspect           Prospect      @relation(fields: [sourceProspectId], references: [id], onDelete: Restrict)
-  salesExecutive           User          @relation("CustomerSalesExecutive", fields: [salesExecutiveId], references: [id], onDelete: Restrict)
-  convertedByAdmin         User          @relation("CustomerConverter", fields: [convertedByAdminId], references: [id], onDelete: Restrict)
+  id                     String        @id @db.Char(36)
+  customerCode           String        @unique @map("customer_code") @db.VarChar(64)
+  parentCompanyId        String        @map("parent_company_id") @db.Char(36)
+  sourceProspectId       String?       @map("source_prospect_id") @db.Char(36)
+  sourceGooglePlaceId    String?       @map("source_google_place_id") @db.VarChar(191)
+  name                   String        @db.VarChar(255)
+  segment                String        @db.VarChar(191)
+  category               String        @db.VarChar(191)
+  addressMode            String        @default("MANUAL") @map("address_mode") @db.VarChar(64)
+  province               String        @default("") @db.VarChar(191)
+  district               String        @default("") @db.VarChar(191)
+  subDistrict            String        @default("") @map("sub_district") @db.VarChar(191)
+  village                String        @default("") @db.VarChar(191)
+  latitude               Float?        @db.Double
+  longitude              Float?        @db.Double
+  previewAddress         String        @map("preview_address") @db.Text
+  siteContacts           Json          @default("[]") @map("site_contacts")
+  ppn                    String        @default("") @db.VarChar(64)
+  idTkuNumber            String        @default("") @map("id_tku_number") @db.VarChar(64)
+  nik                    String        @default("") @db.VarChar(64)
+  shipmentCost           String        @default("") @map("shipment_cost") @db.VarChar(191)
+  invoiceType            String        @default("") @map("invoice_type") @db.VarChar(191)
+  bankAccount            String        @default("") @map("bank_account") @db.VarChar(191)
+  billToSource           String        @default("") @map("bill_to_source") @db.VarChar(191)
+  shipToSource           String        @default("") @map("ship_to_source") @db.VarChar(191)
+  billingAddressPreview  String        @default("") @map("billing_address_preview") @db.Text
+  shippingAddressPreview String        @default("") @map("shipping_address_preview") @db.Text
+  salesExecutiveId       String        @map("sales_executive_id") @db.Char(36)
+  salesAssignments       Json          @default("[]") @map("sales_assignments")
+  convertedAt            DateTime      @map("converted_at") @db.DateTime(6)
+  convertedByAdminId     String        @map("converted_by_admin_id") @db.Char(36)
+  createdAt              DateTime      @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt              DateTime      @updatedAt @map("updated_at") @db.DateTime(6)
+  parentCompany          ParentCompany @relation(fields: [parentCompanyId], references: [id], onDelete: Restrict)
+
+  salesExecutive   User @relation("CustomerSalesExecutive", fields: [salesExecutiveId], references: [id], onDelete: Restrict)
+  convertedByAdmin User @relation("CustomerConverter", fields: [convertedByAdminId], references: [id], onDelete: Restrict)
 
   @@index([salesExecutiveId, convertedAt])
   @@index([parentCompanyId])
   @@map("customer_sites")
+}
+
+model CodeCounter {
+  name         String   @id @db.VarChar(64)
+  currentValue BigInt   @map("current_value")
+  updatedAt    DateTime @map("updated_at") @db.DateTime(6)
+
+  @@map("code_counters")
 }

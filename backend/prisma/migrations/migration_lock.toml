@@ -1,3 +1,3 @@
 # Prisma uses this file to prevent migrations from being applied with a
-# different database provider. Runtime database access remains in Go/pgx.
-provider = "postgresql"
+# different database provider. Runtime database access remains in Go/database/sql.
+provider = "mysql"
